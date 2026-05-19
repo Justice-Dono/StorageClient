@@ -1,31 +1,48 @@
 package client;
 import java.io.*;
-import java.io.IOException;
+import java.awt.Desktop;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.*;
 import java.util.UUID;
+import javax.swing.JFileChooser;
+import java.awt.FileDialog;
+import java.awt.Frame;
 
 public class StorageClient {
 
     private static final String WORKER_URL = "https://clean-upload-api.jordan-tewnion.workers.dev/";
 
     public static void main(String[] args) {
-
-        File local_file = new File("test.webp");
-        System.out.println(local_file.exists());
-        if (!local_file.exists()) {
-            System.out.println("File does not exist.");
-            return;
+        /**JFileChooser chooser = new JFileChooser();
+        int result = chooser.showOpenDialog(null);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            System.out.println("Selected file: " + chooser.getSelectedFile().getAbsolutePath());
+        }**/
+        FileDialog dialog = new FileDialog((Frame)null, "Select File");
+        dialog.setMode(FileDialog.LOAD);
+        dialog.setVisible(true);
+        String directory = dialog.getDirectory();
+        String filename = dialog.getFile();
+        File local_file = null;
+        if (filename != null) {
+            local_file = new File(directory, filename);
+            System.out.println(local_file.getAbsolutePath());
         }
-
+        if(!local_file.exists()){
+            System.out.println("Chosen file does not exist!");
+            System.exit(0);
+        }
         try {
             uploadFile(local_file);
             System.out.println("File made it to upload");
+            System.exit(0);
         } catch (Exception e) {
             e.printStackTrace();
+            System.exit(0);
+
         }
     }
 
@@ -70,5 +87,7 @@ public class StorageClient {
                 request,
                 HttpResponse.BodyHandlers.ofString()
         );
+        System.out.println("Upload Finished!");
+        return;
     }
 }
