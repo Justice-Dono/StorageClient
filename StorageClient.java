@@ -1,13 +1,9 @@
 package client;
 import java.io.*;
-import java.awt.Desktop;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.http.*;
 import java.nio.file.*;
 import java.util.UUID;
-import javax.swing.JFileChooser;
 import java.awt.FileDialog;
 import java.awt.Frame;
 
@@ -16,11 +12,6 @@ public class StorageClient {
     private static final String WORKER_URL = "https://clean-upload-api.jordan-tewnion.workers.dev/";
 
     public static void main(String[] args) {
-        /**JFileChooser chooser = new JFileChooser();
-        int result = chooser.showOpenDialog(null);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            System.out.println("Selected file: " + chooser.getSelectedFile().getAbsolutePath());
-        }**/
         FileDialog dialog = new FileDialog((Frame)null, "Select File");
         dialog.setMode(FileDialog.LOAD);
         dialog.setVisible(true);
