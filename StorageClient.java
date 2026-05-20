@@ -14,20 +14,15 @@ public class StorageClient {
     public static void main(String[] args) {
         FileDialog dialog = new FileDialog((Frame)null, "Select File");
         dialog.setMode(FileDialog.LOAD);
+        dialog.setMultipleMode(true);
         dialog.setVisible(true);
-        String directory = dialog.getDirectory();
-        String filename = dialog.getFile();
-        File local_file = null;
-        if (filename != null) {
-            local_file = new File(directory, filename);
-            System.out.println(local_file.getAbsolutePath());
-        }
-        if(!local_file.exists()){
-            System.out.println("Chosen file does not exist!");
+        File[] local_file = dialog.getFiles();
+        if(local_file.length == 0){
+            System.out.println("No files selected");
             System.exit(0);
         }
         try {
-            uploadFile(local_file);
+            uploadFiles(local_file);
             System.out.println("File made it to upload");
             System.exit(0);
         } catch (Exception e) {
@@ -37,37 +32,50 @@ public class StorageClient {
         }
     }
 
-    public static void uploadFile(File file) throws Exception {
+    public static void uploadFiles(File[] files) throws Exception {
 
         String boundary = "Boundary-" + UUID.randomUUID();
-
-        byte[] fileBytes = Files.readAllBytes(file.toPath());
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream));
 
-        // Multipart form header
-        writer.append("--").append(boundary).append("\r\n");
-        writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"")
-              .append(file.getName())
-              .append("\"\r\n");
-        writer.append("Content-Type: application/octet-stream\r\n\r\n");
-        writer.flush();
+        for (File file : files) {
 
-        // File bytes
-        outputStream.write(fileBytes);
-        outputStream.flush();
+            if (!file.exists()) {
+                System.out.println("Skipping missing file: " + file.getName());
+                continue;
+            }
 
-        // Closing boundary
-        writer.append("\r\n--")
+            byte[] fileBytes = Files.readAllBytes(file.toPath());
+
+            
+         writer.append("--").append(boundary).append("\r\n");
+            writer.append("Content-Disposition: form-data; name=\"files\"; filename=\"")
+                  .append(file.getName())
+                  .append("\"\r\n");
+            writer.append("Content-Type: application/octet-stream\r\n\r\n");
+            writer.flush();
+
+            outputStream.write(fileBytes);
+            outputStream.flush();
+
+            writer.append("\r\n");
+            writer.flush();
+
+            System.out.println("Prepared: " + file.getName());
+        }
+
+    // Closing boundary
+        writer.append("--")
               .append(boundary)
               .append("--\r\n");
+
         writer.flush();
 
         byte[] requestBody = outputStream.toByteArray();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(WORKER_URL))
+               .uri(URI.create(WORKER_URL))
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(requestBody))
                 .build();
@@ -78,7 +86,10 @@ public class StorageClient {
                 request,
                 HttpResponse.BodyHandlers.ofString()
         );
-        System.out.println("Upload Finished!");
-        return;
+
+        System.out.println("Status Code: " + response.statusCode());
+        System.out.println("Response: " + response.body());
+
+        System.out.println("Upload finished!");
     }
 }
