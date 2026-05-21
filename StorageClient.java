@@ -32,7 +32,7 @@ public class StorageClient {
         }
     }
 
-    public static void uploadFiles(File[] files) throws Exception {
+    public static String uploadFiles(File[] files) throws Exception {
 
         String boundary = "Boundary-" + UUID.randomUUID();
 
@@ -65,7 +65,7 @@ public class StorageClient {
             System.out.println("Prepared: " + file.getName());
         }
 
-    // Closing boundary
+    
         writer.append("--")
               .append(boundary)
               .append("--\r\n");
@@ -81,15 +81,21 @@ public class StorageClient {
                 .build();
 
         HttpClient client = HttpClient.newHttpClient();
-
+         System.out.println("Sending request");
         HttpResponse<String> response = client.send(
                 request,
                 HttpResponse.BodyHandlers.ofString()
         );
+        System.out.println("Request recieved!");
+        if (response.statusCode() != 200) {
+            throw new RuntimeException(
+            "Upload failed (" +
+            response.statusCode() +
+            "): " +
+            response.body()
+        );
+        }
 
-        System.out.println("Status Code: " + response.statusCode());
-        System.out.println("Response: " + response.body());
-
-        System.out.println("Upload finished!");
+        return response.body();
     }
 }

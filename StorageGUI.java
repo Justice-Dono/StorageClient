@@ -9,6 +9,8 @@ public class StorageGUI extends JFrame {
     private final DefaultListModel<String> fileListModel;
     private final JTextArea statusArea;
 
+    private final JButton uploadButton;
+
     private File[] selectedFiles;
 
     public StorageGUI() {
@@ -21,26 +23,33 @@ public class StorageGUI extends JFrame {
         selectedFiles = new File[0];
 
         fileListModel = new DefaultListModel<>();
-        statusArea = new JTextArea();
 
+        statusArea = new JTextArea();
         statusArea.setEditable(false);
+        statusArea.setRows(8);
 
         JButton selectButton = new JButton("Select Files");
-        JButton uploadButton = new JButton("Upload");
+        uploadButton = new JButton("Upload");
 
         JList<String> fileList = new JList<>(fileListModel);
 
         selectButton.addActionListener(e -> selectFiles());
-
         uploadButton.addActionListener(e -> uploadSelectedFiles());
 
         JPanel topPanel = new JPanel();
         topPanel.add(selectButton);
         topPanel.add(uploadButton);
 
+        JScrollPane filePane = new JScrollPane(fileList);
+
+        JScrollPane statusPane = new JScrollPane(statusArea);
+        statusPane.setPreferredSize(
+                new Dimension(700, 150)
+        );
+
         add(topPanel, BorderLayout.NORTH);
-        add(new JScrollPane(fileList), BorderLayout.CENTER);
-        add(new JScrollPane(statusArea), BorderLayout.SOUTH);
+        add(filePane, BorderLayout.CENTER);
+        add(statusPane, BorderLayout.SOUTH);
     }
 
     private void selectFiles() {
@@ -57,7 +66,7 @@ public class StorageGUI extends JFrame {
         File[] files = dialog.getFiles();
 
         if (files == null || files.length == 0) {
-            statusArea.append("No files selected.\n");
+            appendStatus("No files selected.");
             return;
         }
 
@@ -66,63 +75,111 @@ public class StorageGUI extends JFrame {
         fileListModel.clear();
 
         for (File file : selectedFiles) {
-            fileListModel.addElement(file.getAbsolutePath());
+            fileListModel.addElement(
+                    file.getAbsolutePath()
+            );
         }
 
-        statusArea.append(
+        appendStatus(
                 "Selected " +
                 selectedFiles.length +
-                " file(s).\n"
+                " file(s)."
         );
     }
 
     private void uploadSelectedFiles() {
 
         if (selectedFiles.length == 0) {
-            statusArea.append("No files selected.\n");
+            appendStatus("No files selected.");
             return;
         }
 
-        statusArea.append(
+        uploadButton.setEnabled(false);
+
+        appendStatus(
                 "Uploading " +
                 selectedFiles.length +
-                " file(s)...\n"
+                " file(s)..."
         );
 
-        // Run upload in background so UI doesn't freeze
         new Thread(() -> {
 
             try {
 
-                StorageClient.uploadFiles(selectedFiles);
-
-                SwingUtilities.invokeLater(() ->
-                        statusArea.append(
-                                "Upload completed successfully.\n"
-                        )
+                System.out.println(
+                        "Calling uploadFiles()"
                 );
+
+                String response =
+                        StorageClient.uploadFiles(
+                                selectedFiles
+                        );
+
+                System.out.println(
+                        "uploadFiles() returned"
+                );
+
+                System.out.println(
+                        "Response: " + response
+                );
+
+                SwingUtilities.invokeLater(() -> {
+
+                    System.out.println(
+                            "Inside invokeLater"
+                    );
+
+                    appendStatus(
+                            "Upload completed successfully."
+                    );
+
+
+                    selectedFiles = new File[0];
+                    fileListModel.clear();
+
+
+                    uploadButton.setEnabled(true);
+                });
 
             } catch (Exception ex) {
 
-                SwingUtilities.invokeLater(() ->
-                        statusArea.append(
-                                "Upload failed: " +
-                                ex.getMessage() +
-                                "\n"
-                        )
-                );
-
                 ex.printStackTrace();
+
+                SwingUtilities.invokeLater(() -> {
+
+                    appendStatus(
+                            "Upload failed:"
+                    );
+
+                    appendStatus(
+                            ex.getMessage()
+                    );
+
+                    uploadButton.setEnabled(true);
+                });
             }
 
         }).start();
     }
 
+    private void appendStatus(String text) {
+
+        statusArea.append(text + "\n");
+
+        statusArea.setCaretPosition(
+                statusArea.getDocument().getLength()
+        );
+    }
+
     public static void main(String[] args) {
 
         SwingUtilities.invokeLater(() -> {
-            StorageGUI gui = new StorageGUI();
+
+            StorageGUI gui =
+                    new StorageGUI();
+
             gui.setVisible(true);
+
         });
     }
 }
