@@ -11,12 +11,14 @@ public class StorageGUI extends JFrame {
 
     private final JButton uploadButton;
 
+    private final JProgressBar progressBar;
+
     private File[] selectedFiles;
 
     public StorageGUI() {
 
         setTitle("Storage Client");
-        setSize(700, 500);
+        setSize(700, 550);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -26,12 +28,17 @@ public class StorageGUI extends JFrame {
 
         statusArea = new JTextArea();
         statusArea.setEditable(false);
-        statusArea.setRows(8);
+        statusArea.setRows(6);
 
         JButton selectButton = new JButton("Select Files");
         uploadButton = new JButton("Upload");
 
         JList<String> fileList = new JList<>(fileListModel);
+
+
+        progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+        progressBar.setValue(0);
 
         selectButton.addActionListener(e -> selectFiles());
         uploadButton.addActionListener(e -> uploadSelectedFiles());
@@ -43,12 +50,15 @@ public class StorageGUI extends JFrame {
         JScrollPane filePane = new JScrollPane(fileList);
 
         JScrollPane statusPane = new JScrollPane(statusArea);
-        statusPane.setPreferredSize(
-                new Dimension(700, 150)
-        );
+        statusPane.setPreferredSize(new Dimension(700, 120));
+
+        // Layout container for center area (progress + files)
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(progressBar, BorderLayout.NORTH);
+        centerPanel.add(filePane, BorderLayout.CENTER);
 
         add(topPanel, BorderLayout.NORTH);
-        add(filePane, BorderLayout.CENTER);
+        add(centerPanel, BorderLayout.CENTER);
         add(statusPane, BorderLayout.SOUTH);
     }
 
@@ -75,10 +85,10 @@ public class StorageGUI extends JFrame {
         fileListModel.clear();
 
         for (File file : selectedFiles) {
-            fileListModel.addElement(
-                    file.getAbsolutePath()
-            );
+            fileListModel.addElement(file.getAbsolutePath());
         }
+
+        progressBar.setValue(0);
 
         appendStatus(
                 "Selected " +
@@ -95,6 +105,7 @@ public class StorageGUI extends JFrame {
         }
 
         uploadButton.setEnabled(false);
+        progressBar.setValue(0);
 
         appendStatus(
                 "Uploading " +
@@ -106,37 +117,37 @@ public class StorageGUI extends JFrame {
 
             try {
 
-                System.out.println(
-                        "Calling uploadFiles()"
-                );
+                int total = selectedFiles.length;
 
-                String response =
-                        StorageClient.uploadFiles(
-                                selectedFiles
-                        );
+                for (int i = 0; i < total; i++) {
 
-                System.out.println(
-                        "uploadFiles() returned"
-                );
+                    File file = selectedFiles[i];
 
-                System.out.println(
-                        "Response: " + response
-                );
+                    appendStatus("Uploading: " + file.getName());
+
+                    // simulate per-file progress step
+                    int progress = (int) (((i) / (double) total) * 100);
+
+                    final int finalProgress = progress;
+
+                    SwingUtilities.invokeLater(() -> {
+                        progressBar.setValue(finalProgress);
+                        progressBar.setString(finalProgress + "%");
+                    });
+
+                    // call your real uploader
+                    StorageClient.uploadFiles(new File[]{file});
+                }
 
                 SwingUtilities.invokeLater(() -> {
 
-                    System.out.println(
-                            "Inside invokeLater"
-                    );
+                    progressBar.setValue(100);
+                    progressBar.setString("100%");
 
-                    appendStatus(
-                            "Upload completed successfully."
-                    );
-
+                    appendStatus("Upload completed successfully.");
 
                     selectedFiles = new File[0];
                     fileListModel.clear();
-
 
                     uploadButton.setEnabled(true);
                 });
@@ -147,13 +158,7 @@ public class StorageGUI extends JFrame {
 
                 SwingUtilities.invokeLater(() -> {
 
-                    appendStatus(
-                            "Upload failed:"
-                    );
-
-                    appendStatus(
-                            ex.getMessage()
-                    );
+                    appendStatus("Upload failed: " + ex.getMessage());
 
                     uploadButton.setEnabled(true);
                 });
@@ -175,9 +180,7 @@ public class StorageGUI extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
 
-            StorageGUI gui =
-                    new StorageGUI();
-
+            StorageGUI gui = new StorageGUI();
             gui.setVisible(true);
 
         });
